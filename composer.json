@@ -15,5 +15,9 @@
 	},
 	"require-dev": {
 		"heroku/heroku-buildpack-php": "^104.0"
+	},
+
+	"scripts": {
+		"compile": "echo 'this is composer compile script'"
 	}
 }
