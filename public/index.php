@@ -25,6 +25,10 @@ $app['container'] = new Container();
 $environment_patcher = $app['container']['environment_patcher'];
 $environment_patcher->patch();
 
+$app->get('/', function (Application $app) {
+	return $app->redirect('https://github.com/console-helpers/svn-buddy');
+});
+
 $app->get('/versions', function (Application $app) {
 	/** @var ReleaseManager $release_manager */
 	$release_manager = $app['container']['release_manager'];
