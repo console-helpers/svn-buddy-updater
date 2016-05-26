@@ -19,7 +19,6 @@ require_once dirname(__DIR__) . '/vendor/autoload.php';
 
 $app = new Application();
 
-$app['debug'] = true;
 $app['container'] = new Container();
 
 /** @var EnvironmentPatcher $environment_patcher */
