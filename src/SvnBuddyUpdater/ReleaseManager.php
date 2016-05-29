@@ -140,7 +140,7 @@ class ReleaseManager
 	}
 
 	/**
-	 * Returns commit hash for next snapshot release.
+	 * Returns commit hash/date for next snapshot release.
 	 *
 	 * @return array
 	 * @throws \LogicException When failed to get commit.
@@ -162,18 +162,7 @@ class ReleaseManager
 			throw new \LogicException('Unable to detect commit for the snapshot.');
 		}
 
-		list($commit_hash, $commit_date) = explode(':', trim($output), 2);
-
-		$tag = $this->_gitCommand('tag', array(
-			'--points-at=' . $commit_hash,
-		));
-
-		// Commit, that is tagged as stable release can't be used for a snapshot.
-		if ( trim($tag) !== '' ) {
-			return array();
-		}
-
-		return array($commit_hash, $commit_date);
+		return explode(':', trim($output), 2);
 	}
 
 	/**
