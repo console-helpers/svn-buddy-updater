@@ -150,12 +150,12 @@ class ReleaseManager
 		$this->_gitCommand('checkout', array('master'));
 		$this->_gitCommand('pull');
 
-		$last_day_of_last_week = strtotime('this week midnight -1 day');
+		$this_week_monday = strtotime(date('Y') . 'W' . date('W'));
 
 		$output = $this->_gitCommand('log', array(
 			'--format=%H:%cd',
 			'--max-count=1',
-			'--before=' . date('Y-m-d', $last_day_of_last_week),
+			'--before=' . date('Y-m-d', $this_week_monday),
 		));
 
 		if ( strpos($output, ':') === false ) {
