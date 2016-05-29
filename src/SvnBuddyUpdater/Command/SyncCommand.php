@@ -13,6 +13,7 @@ namespace ConsoleHelpers\SvnBuddyUpdater\Command;
 
 use ConsoleHelpers\SvnBuddyUpdater\ReleaseManager;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
 class SyncCommand extends AbstractCommand
@@ -32,7 +33,19 @@ class SyncCommand extends AbstractCommand
 	{
 		$this
 			->setName('sync')
-			->setDescription('Sync releases between GitHub and Heroku');
+			->setDescription('Populates releases information')
+			->addOption(
+				'stable',
+				null,
+				InputOption::VALUE_NONE,
+				'Synchronizes stable releases'
+			)
+			->addOption(
+				'snapshot',
+				null,
+				InputOption::VALUE_NONE,
+				'Synchronizes snapshot releases'
+			);
 	}
 
 	/**
@@ -51,9 +64,15 @@ class SyncCommand extends AbstractCommand
 	 */
 	protected function execute(InputInterface $input, OutputInterface $output)
 	{
-		$this->_releaseManager->syncReleasesFromGitHub();
+		if ( $this->io->getOption('stable') ) {
+			$this->_releaseManager->syncReleasesFromGitHub();
+			$this->io->writeln('Releases synchronized with GitHub.');
+		}
 
-		$this->io->writeln('Releases synchronized with GitHub.');
+		if ( $this->io->getOption('snapshot') ) {
+			$this->_releaseManager->syncReleasesFromRepository();
+			$this->io->writeln('Releases synchronized with Repository.');
+		}
 	}
 
 }

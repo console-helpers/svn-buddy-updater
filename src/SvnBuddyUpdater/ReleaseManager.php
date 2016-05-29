@@ -12,11 +12,19 @@ namespace ConsoleHelpers\SvnBuddyUpdater;
 
 
 use Aura\Sql\ExtendedPdoInterface;
+use Aws\S3\S3Client;
 use Github\Client;
 use Github\HttpClient\CachedHttpClient;
+use Symfony\Component\Process\ProcessBuilder;
 
 class ReleaseManager
 {
+
+	const STABILITY_STABLE = 'stable';
+
+	const STABILITY_SNAPSHOT = 'snapshot';
+
+	const SNAPSHOT_LIFETIME = '3 weeks';
 
 	/**
 	 * Database
@@ -36,6 +44,27 @@ class ReleaseManager
 	);
 
 	/**
+	 * Repository path.
+	 *
+	 * @var string
+	 */
+	private $_repositoryPath;
+
+	/**
+	 * Snapshots path.
+	 *
+	 * @var string
+	 */
+	private $_snapshotsPath;
+
+	/**
+	 * Name of S3 bucket where snapshots are stored.
+	 *
+	 * @var string
+	 */
+	private $_s3BucketName;
+
+	/**
 	 * Creates release manager instance.
 	 *
 	 * @param ExtendedPdoInterface $db Database.
@@ -43,6 +72,9 @@ class ReleaseManager
 	public function __construct(ExtendedPdoInterface $db)
 	{
 		$this->_db = $db;
+		$this->_repositoryPath = realpath(__DIR__ . '/../../workspace/repository');
+		$this->_snapshotsPath = realpath(__DIR__ . '/../../workspace/snapshots');
+		$this->_s3BucketName = $_SERVER['S3_BUCKET'];
 	}
 
 	/**
@@ -52,7 +84,7 @@ class ReleaseManager
 	 */
 	public function syncReleasesFromGitHub()
 	{
-		$this->_deleteReleases();
+		$this->_deleteReleases(self::STABILITY_STABLE);
 
 		foreach ( $this->_getReleasesFromGitHub() as $release_data ) {
 			$bind_params = array(
@@ -60,7 +92,7 @@ class ReleaseManager
 				'release_date' => strtotime($release_data['published_at']),
 				'phar_download_url' => '',
 				'signature_download_url' => '',
-				'stability' => 'stable',
+				'stability' => self::STABILITY_STABLE,
 			);
 
 			foreach ( $release_data['assets'] as $asset_data ) {
@@ -73,20 +105,8 @@ class ReleaseManager
 
 			$sql = 'INSERT INTO releases (version_name, release_date, phar_download_url, signature_download_url, stability)
 					VALUES (:version_name, :release_date, :phar_download_url, :signature_download_url, :stability)';
-
 			$this->_db->perform($sql, $bind_params);
 		}
-	}
-
-	/**
-	 * Deletes releases.
-	 *
-	 * @return void
-	 */
-	private function _deleteReleases()
-	{
-		$sql = 'DELETE FROM releases';
-		$this->_db->perform($sql);
 	}
 
 	/**
@@ -101,6 +121,265 @@ class ReleaseManager
 		);
 
 		return $client->api('repo')->releases()->all('console-helpers', 'svn-buddy');
+	}
+
+	/**
+	 * Syncs releases from GitHub.
+	 *
+	 * @return void
+	 */
+	public function syncReleasesFromRepository()
+	{
+		$commit_data = $this->_getCommitForSnapshotRelease();
+
+		if ( $commit_data ) {
+			$this->_createSnapshotRelease($commit_data[0], $commit_data[1]);
+		}
+
+		$this->_deleteOldSnapshots();
+	}
+
+	/**
+	 * Returns commit hash for next snapshot release.
+	 *
+	 * @return array
+	 * @throws \LogicException When failed to get commit.
+	 */
+	private function _getCommitForSnapshotRelease()
+	{
+		$this->_gitCommand('checkout', array('master'));
+		$this->_gitCommand('pull');
+
+		$last_day_of_last_week = strtotime('this week midnight -1 day');
+
+		$output = $this->_gitCommand('log', array(
+			'--format=%H:%cd',
+			'--max-count=1',
+			'--before=' . date('Y-m-d', $last_day_of_last_week),
+		));
+
+		if ( strpos($output, ':') === false ) {
+			throw new \LogicException('Unable to detect commit for the snapshot.');
+		}
+
+		list($commit_hash, $commit_date) = explode(':', trim($output), 2);
+
+		$tag = $this->_gitCommand('tag', array(
+			'--points-at=' . $commit_hash,
+		));
+
+		// Commit, that is tagged as stable release can't be used for a snapshot.
+		if ( trim($tag) !== '' ) {
+			return array();
+		}
+
+		return array($commit_hash, $commit_date);
+	}
+
+	/**
+	 * Generates phar for snapshot release.
+	 *
+	 * @param string $commit_hash Commit hash.
+	 * @param string $commit_date Commit date.
+	 *
+	 * @return void
+	 */
+	private function _createSnapshotRelease($commit_hash, $commit_date)
+	{
+		$sql = 'SELECT version_name
+				FROM releases
+				WHERE version_name = :version';
+		$found_version = $this->_db->fetchValue($sql, array('version' => $commit_hash));
+
+		if ( $found_version === $commit_hash ) {
+			return;
+		}
+
+		list($phar_download_url, $signature_download_url) = $this->_createPhar($commit_hash);
+
+		$bind_params = array(
+			'version_name' => $commit_hash,
+			'release_date' => strtotime($commit_date),
+			'phar_download_url' => $phar_download_url,
+			'signature_download_url' => $signature_download_url,
+			'stability' => self::STABILITY_SNAPSHOT,
+		);
+
+		$sql = 'INSERT INTO releases (version_name, release_date, phar_download_url, signature_download_url, stability)
+				VALUES (:version_name, :release_date, :phar_download_url, :signature_download_url, :stability)';
+		$this->_db->perform($sql, $bind_params);
+	}
+
+	/**
+	 * Creates phar.
+	 *
+	 * @param string $commit_hash Commit hash.
+	 *
+	 * @return array
+	 */
+	private function _createPhar($commit_hash)
+	{
+		$this->_gitCommand('checkout', array($commit_hash));
+		$this->_shellCommand(
+			'composer',
+			array(
+				'install',
+				'--no-interaction',
+				'--no-dev',
+			),
+			$this->_repositoryPath
+		);
+
+		$phar_file = $this->_snapshotsPath . '/svn-buddy.phar';
+		$signature_file = $phar_file . '.sig';
+
+		$box_config = json_decode(file_get_contents($this->_repositoryPath . '/box.json.dist'), true);
+		$box_config['output'] = $phar_file;
+
+		file_put_contents(
+			$this->_repositoryPath . '/box.json',
+			json_encode($box_config, defined('JSON_PRETTY_PRINT') ? JSON_PRETTY_PRINT : 0)
+		);
+
+		$this->_shellCommand('box', array('build'), $this->_repositoryPath);
+
+		file_put_contents(
+			$signature_file,
+			$this->_shellCommand('sha1sum', array(basename($phar_file)), dirname($phar_file))
+		);
+
+		return $this->_uploadToS3(
+			'snapshots/' . $commit_hash,
+			array($phar_file, $signature_file)
+		);
+	}
+
+	/**
+	 * Deletes old snapshots.
+	 *
+	 * @return void
+	 */
+	private function _deleteOldSnapshots()
+	{
+		$latest_versions = $this->getLatestVersionsForStability();
+
+		if ( !isset($latest_versions[self::STABILITY_SNAPSHOT]) ) {
+			return;
+		}
+
+		$sql = 'SELECT version_name
+				FROM releases
+				WHERE stability = :stability AND release_date < :release_date AND version_name != :latest_version
+				ORDER BY release_date ASC';
+		$versions = $this->_db->fetchCol($sql, array(
+			'stability' => self::STABILITY_SNAPSHOT,
+			'release_date' => strtotime('-' . self::SNAPSHOT_LIFETIME),
+			'latest_version' => $latest_versions[self::STABILITY_SNAPSHOT]['version'],
+		));
+
+		if ( !$versions ) {
+			return;
+		}
+
+		// Delete associated S3 objects.
+		$s3_objects = array();
+
+		foreach ( $versions as $version ) {
+			$s3_objects[] = array('Key' => 'snapshots/' . $version . '/svn-buddy.phar');
+			$s3_objects[] = array('Key' => 'snapshots/' . $version . '/svn-buddy.phar.sig');
+			$s3_objects[] = array('Key' => 'snapshots/' . $version);
+		}
+
+		$s3 = S3Client::factory();
+		$s3->deleteObjects(array(
+			'Bucket' => $this->_s3BucketName,
+			'Objects' => $s3_objects,
+		));
+
+		// Delete versions.
+		$sql = 'DELETE FROM releases
+				WHERE version_name IN (:versions)';
+		$this->_db->perform($sql, array(
+			'versions' => $versions,
+		));
+	}
+
+	/**
+	 * Uploads files to S3.
+	 *
+	 * @param string $parent_folder Parent folder.
+	 * @param array  $files         Files.
+	 *
+	 * @return array
+	 */
+	private function _uploadToS3($parent_folder, array $files)
+	{
+		$urls = array();
+		$s3 = S3Client::factory();
+
+		foreach ( $files as $index => $file ) {
+			$uploaded = $s3->upload(
+				$this->_s3BucketName,
+				$parent_folder . '/' . basename($file),
+				fopen($file, 'rb'),
+				'public-read'
+			);
+
+			$urls[$index] = $uploaded->get('ObjectURL');
+		}
+
+		return $urls;
+	}
+
+	/**
+	 * Deletes releases.
+	 *
+	 * @param string $stability Stability.
+	 *
+	 * @return void
+	 */
+	private function _deleteReleases($stability)
+	{
+		$sql = 'DELETE FROM releases
+				WHERE stability = :stability';
+		$this->_db->perform($sql, array(
+			'stability' => $stability,
+		));
+	}
+
+	/**
+	 * Runs git command.
+	 *
+	 * @param string $command   Command.
+	 * @param array  $arguments Arguments.
+	 *
+	 * @return string
+	 */
+	private function _gitCommand($command, array $arguments = array())
+	{
+		array_unshift($arguments, $command);
+
+		return $this->_shellCommand('git', $arguments, $this->_repositoryPath);
+	}
+
+	/**
+	 * Runs command.
+	 *
+	 * @param string      $command           Command.
+	 * @param array       $arguments         Arguments.
+	 * @param string|null $working_directory Working directory.
+	 *
+	 * @return string
+	 */
+	private function _shellCommand($command, array $arguments = array(), $working_directory = null)
+	{
+		$final_arguments = array_merge(array($command), $arguments);
+
+		$process = ProcessBuilder::create($final_arguments)
+			->setWorkingDirectory($working_directory)
+			->getProcess();
+
+		return $process->mustRun()->getOutput();
 	}
 
 	/**

@@ -11,12 +11,14 @@
 	],
 
 	"require": {
-		"php": ">=5.5.9",
+		"php": ">=5.4.0",
 		"kherge/box": "^2.7",
 		"aura/sql": "^2.5",
 		"console-helpers/console-kit": "^0.1",
 		"knplabs/github-api": "^1.6",
-		"silex/silex": "^2.0"
+		"silex/silex": "^2.0",
+		"symfony/process": "^2.8",
+		"aws/aws-sdk-php": "^2.8"
 	},
 	"require-dev": {
 		"heroku/heroku-buildpack-php": "^104.0",
