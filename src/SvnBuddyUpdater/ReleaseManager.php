@@ -220,34 +220,17 @@ class ReleaseManager
 	private function _createPhar($commit_hash)
 	{
 		$this->_gitCommand('checkout', array($commit_hash));
+
 		$this->_shellCommand(
-			'composer',
+			$this->_repositoryPath . '/bin/svn-buddy',
 			array(
-				'install',
-				'--no-interaction',
-				'--no-dev',
-			),
-			$this->_repositoryPath
+				'dev:phar-create',
+				'--build-dir=' . $this->_snapshotsPath,
+			)
 		);
 
 		$phar_file = $this->_snapshotsPath . '/svn-buddy.phar';
-		$signature_file = $phar_file . '.sig';
-
-		$box_config = json_decode(file_get_contents($this->_repositoryPath . '/box.json.dist'), true);
-		$box_config['output'] = $phar_file;
-
-		file_put_contents(
-			$this->_repositoryPath . '/box.json',
-			json_encode($box_config, defined('JSON_PRETTY_PRINT') ? JSON_PRETTY_PRINT : 0)
-		);
-
-		$box_cli = trim($this->_shellCommand('which', array('box')));
-		$this->_shellCommand('php', array('-d', 'phar.readonly=0', $box_cli, 'build'), $this->_repositoryPath);
-
-		file_put_contents(
-			$signature_file,
-			$this->_shellCommand('sha1sum', array(basename($phar_file)), dirname($phar_file))
-		);
+		$signature_file = $this->_snapshotsPath . '/svn-buddy.phar.sig';
 
 		return $this->_uploadToS3(
 			'snapshots/' . $commit_hash,
