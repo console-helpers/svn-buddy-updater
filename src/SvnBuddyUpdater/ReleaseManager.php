@@ -241,7 +241,8 @@ class ReleaseManager
 			json_encode($box_config, defined('JSON_PRETTY_PRINT') ? JSON_PRETTY_PRINT : 0)
 		);
 
-		$this->_shellCommand('box', array('build'), $this->_repositoryPath);
+		$box_cli = trim($this->_shellCommand('which', array('box')));
+		$this->_shellCommand('php', array('-d', 'phar.readonly=0', $box_cli, 'build'), $this->_repositoryPath);
 
 		file_put_contents(
 			$signature_file,
