@@ -16,7 +16,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
-class SyncCommand extends AbstractCommand
+class CreateSnapshotCommand extends AbstractCommand
 {
 
 	/**
@@ -32,19 +32,13 @@ class SyncCommand extends AbstractCommand
 	protected function configure()
 	{
 		$this
-			->setName('sync')
-			->setDescription('Populates releases information')
+			->setName('snapshot:create')
+			->setDescription('Creates snapshot releases')
 			->addOption(
-				'stable',
+				'force',
 				null,
 				InputOption::VALUE_NONE,
-				'Synchronizes stable releases'
-			)
-			->addOption(
-				'snapshot',
-				null,
-				InputOption::VALUE_NONE,
-				'Synchronizes snapshot releases'
+				'Create snapshot for latest commit'
 			);
 	}
 
@@ -64,15 +58,8 @@ class SyncCommand extends AbstractCommand
 	 */
 	protected function execute(InputInterface $input, OutputInterface $output)
 	{
-		if ( $this->io->getOption('stable') ) {
-			$this->_releaseManager->syncReleasesFromGitHub();
-			$this->io->writeln('Releases synchronized with GitHub.');
-		}
-
-		if ( $this->io->getOption('snapshot') ) {
-			$this->_releaseManager->syncReleasesFromRepository();
-			$this->io->writeln('Releases synchronized with Repository.');
-		}
+		$this->_releaseManager->syncReleasesFromRepository();
+		$this->io->writeln('Releases synchronized with Repository.');
 	}
 
 }

@@ -13,7 +13,8 @@ namespace ConsoleHelpers\SvnBuddyUpdater;
 
 use ConsoleHelpers\ConsoleKit\Application as BaseApplication;
 use ConsoleHelpers\ConsoleKit\Container;
-use ConsoleHelpers\SvnBuddyUpdater\Command\SyncCommand;
+use ConsoleHelpers\SvnBuddyUpdater\Command\CreateSnapshotCommand;
+use ConsoleHelpers\SvnBuddyUpdater\Command\SyncReleaseCommand;
 use Symfony\Component\Console\Command\Command;
 
 class Application extends BaseApplication
@@ -36,7 +37,8 @@ class Application extends BaseApplication
 	protected function getDefaultCommands()
 	{
 		$default_commands = parent::getDefaultCommands();
-		$default_commands[] = new SyncCommand();
+		$default_commands[] = new SyncReleaseCommand();
+		$default_commands[] = new CreateSnapshotCommand();
 
 		return $default_commands;
 	}
