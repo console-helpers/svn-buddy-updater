@@ -221,12 +221,15 @@ class ReleaseManager
 	 */
 	private function _doCreateRelease($commit_hash, $commit_date, $stability)
 	{
+		$version = $this->getVersionFromCommit($commit_hash, $stability);
+
 		$sql = 'SELECT version_name
 				FROM releases
 				WHERE version_name = :version';
-		$found_version = $this->_db->fetchValue($sql, array('version' => $commit_hash));
+		$found_version = $this->_db->fetchValue($sql, array(
+			'version' => $version,
+		));
 
-		// TODO: When "preview" and "snapshot" release point to same commit only one will be created.
 		if ( $found_version === $commit_hash ) {
 			return;
 		}
@@ -234,7 +237,7 @@ class ReleaseManager
 		list($phar_download_url, $signature_download_url) = $this->_createPhar($commit_hash, $stability);
 
 		$bind_params = array(
-			'version_name' => $commit_hash,
+			'version_name' => $version,
 			'release_date' => strtotime($commit_date),
 			'phar_download_url' => $phar_download_url,
 			'signature_download_url' => $signature_download_url,
@@ -244,6 +247,19 @@ class ReleaseManager
 		$sql = 'INSERT INTO releases (version_name, release_date, phar_download_url, signature_download_url, stability)
 				VALUES (:version_name, :release_date, :phar_download_url, :signature_download_url, :stability)';
 		$this->_db->perform($sql, $bind_params);
+	}
+
+	/**
+	 * Returns version commit and stability.
+	 *
+	 * @param string $commit_hash Commit hash.
+	 * @param string $stability   Stability.
+	 *
+	 * @return string
+	 */
+	protected function getVersionFromCommit($commit_hash, $stability)
+	{
+		return $stability . '.' . $commit_hash;
 	}
 
 	/**
