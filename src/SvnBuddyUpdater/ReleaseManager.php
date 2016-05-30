@@ -26,6 +26,10 @@ class ReleaseManager
 
 	const SNAPSHOT_LIFETIME = '3 weeks';
 
+	const SNAPSHOT_MODE_THIS_WEEK = 1;
+
+	const SNAPSHOT_MODE_PREV_WEEK = 2;
+
 	/**
 	 * Database
 	 *
@@ -124,45 +128,84 @@ class ReleaseManager
 	}
 
 	/**
-	 * Syncs releases from GitHub.
+	 * Syncs releases from Repository.
+	 *
+	 * @param integer $snapshot_mode Snapshot mode.
 	 *
 	 * @return void
+	 * @throws \InvalidArgumentException When invalid snapshot mode is given.
 	 */
-	public function syncReleasesFromRepository()
+	public function createSnapshotRelease($snapshot_mode)
 	{
-		$commit_data = $this->_getCommitForSnapshotRelease();
+		$this->_gitCommand('checkout', array('master'));
+		$this->_gitCommand('pull');
 
-		if ( $commit_data ) {
-			$this->_createSnapshotRelease($commit_data[0], $commit_data[1]);
+		if ( $snapshot_mode === self::SNAPSHOT_MODE_THIS_WEEK ) {
+			$year = date('Y');
+			$week = date('W');
+		}
+		elseif ( $snapshot_mode === self::SNAPSHOT_MODE_PREV_WEEK ) {
+			list($year, $week) = $this->_subtractWeek(date('Y'), date('W'));
+		}
+		else {
+			throw new \InvalidArgumentException('Snapshot mode "' . $snapshot_mode . '" is unknown.');
 		}
 
-		$this->_deleteOldSnapshots();
+		$commit_data = $this->_getLastCommitOfWeek($year, $week);
+
+		if ( $commit_data ) {
+			$this->_doCreateSnapshotRelease($commit_data[0], $commit_data[1]);
+		}
 	}
 
 	/**
 	 * Returns commit hash/date for next snapshot release.
 	 *
+	 * @param integer $year Year.
+	 * @param integer $week Week.
+	 *
 	 * @return array
-	 * @throws \LogicException When failed to get commit.
 	 */
-	private function _getCommitForSnapshotRelease()
+	private function _getLastCommitOfWeek($year, $week)
 	{
-		$this->_gitCommand('checkout', array('master'));
-		$this->_gitCommand('pull');
-
-		$this_week_monday = strtotime(date('Y') . 'W' . date('W'));
+		$week_start = strtotime($year . 'W' . $week);
+		$week_end = strtotime('+1 week -1 second', $week_start);
 
 		$output = $this->_gitCommand('log', array(
 			'--format=%H:%cd',
 			'--max-count=1',
-			'--before=' . date('Y-m-d', $this_week_monday),
+			'--after=' . date('Y-m-d H:i:s', $week_start),
+			'--before=' . date('Y-m-d H:i:s', $week_end),
 		));
+		$output = trim($output);
 
-		if ( strpos($output, ':') === false ) {
-			throw new \LogicException('Unable to detect commit for the snapshot.');
+		// No commits in given week > try previous week.
+		if ( !$output ) {
+			list($prev_week_year, $prev_week) = $this->_subtractWeek($year, $week);
+
+			return $this->_getLastCommitOfWeek($prev_week_year, $prev_week);
 		}
 
-		return explode(':', trim($output), 2);
+		return explode(':', $output, 2);
+	}
+
+	/**
+	 * Subtracts one week.
+	 *
+	 * @param integer $year Year.
+	 * @param integer $week Week.
+	 *
+	 * @return array
+	 */
+	private function _subtractWeek($year, $week)
+	{
+		$this_monday = strtotime($year . 'W' . $week);
+		$prev_sunday = strtotime('-1 second', $this_monday);
+
+		return array(
+			date('Y', $prev_sunday),
+			date('W', $prev_sunday),
+		);
 	}
 
 	/**
@@ -173,7 +216,7 @@ class ReleaseManager
 	 *
 	 * @return void
 	 */
-	private function _createSnapshotRelease($commit_hash, $commit_date)
+	private function _doCreateSnapshotRelease($commit_hash, $commit_date)
 	{
 		$sql = 'SELECT version_name
 				FROM releases
@@ -232,7 +275,7 @@ class ReleaseManager
 	 *
 	 * @return void
 	 */
-	private function _deleteOldSnapshots()
+	public function deleteOldSnapshots()
 	{
 		$latest_versions = $this->getLatestVersionsForStability();
 

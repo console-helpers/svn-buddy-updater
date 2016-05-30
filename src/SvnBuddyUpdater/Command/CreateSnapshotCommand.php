@@ -58,8 +58,15 @@ class CreateSnapshotCommand extends AbstractCommand
 	 */
 	protected function execute(InputInterface $input, OutputInterface $output)
 	{
-		$this->_releaseManager->syncReleasesFromRepository();
-		$this->io->writeln('Releases synchronized with Repository.');
+		if ( $this->io->getOption('force') ) {
+			$this->_releaseManager->createSnapshotRelease(ReleaseManager::SNAPSHOT_MODE_THIS_WEEK);
+		}
+		else {
+			$this->_releaseManager->createSnapshotRelease(ReleaseManager::SNAPSHOT_MODE_PREV_WEEK);
+		}
+
+		$this->_releaseManager->deleteOldSnapshots();
+		$this->io->writeln('Created missing snapshot releases.');
 	}
 
 }
