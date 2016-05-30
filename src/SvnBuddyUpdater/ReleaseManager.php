@@ -453,9 +453,34 @@ class ReleaseManager
 		$sql = 'SELECT ' . $file_mapping[$file] . '
 				FROM releases
 				WHERE version_name = :version';
-		$download_url = $this->_db->fetchValue($sql, array('version' => $version));
+		$download_url = $this->_db->fetchValue($sql, array(
+			'version' => $this->_resolveStabilityVersion($version),
+		));
 
 		return (string)$download_url;
+	}
+
+	/**
+	 * In case, when version is in fact stability return latest version for stability.
+	 *
+	 * @param string $version Version.
+	 *
+	 * @return string
+	 */
+	private function _resolveStabilityVersion($version)
+	{
+		$stabilities = array(self::STABILITY_SNAPSHOT, self::STABILITY_STABLE);
+
+		if ( in_array($version, $stabilities) ) {
+			$stability = $version;
+			$latest_versions = $this->getLatestVersionsForStability();
+
+			if ( isset($latest_versions[$stability]) ) {
+				return $latest_versions[$stability]['version'];
+			}
+		}
+
+		return $version;
 	}
 
 }
