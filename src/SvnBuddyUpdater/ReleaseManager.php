@@ -24,7 +24,7 @@ class ReleaseManager
 
 	const STABILITY_SNAPSHOT = 'snapshot';
 
-	const SNAPSHOT_LIFETIME = '3 weeks';
+	const STABILITY_PREVIEW = 'preview';
 
 	const SNAPSHOT_MODE_THIS_WEEK = 1;
 
@@ -130,31 +130,33 @@ class ReleaseManager
 	/**
 	 * Syncs releases from Repository.
 	 *
-	 * @param integer $snapshot_mode Snapshot mode.
+	 * @param integer $stability Stability.
 	 *
 	 * @return void
 	 * @throws \InvalidArgumentException When invalid snapshot mode is given.
 	 */
-	public function createSnapshotRelease($snapshot_mode)
+	public function createRelease($stability)
 	{
 		$this->_gitCommand('checkout', array('master'));
 		$this->_gitCommand('pull');
 
-		if ( $snapshot_mode === self::SNAPSHOT_MODE_THIS_WEEK ) {
+		if ( $stability === self::STABILITY_PREVIEW ) {
+			// Preview release is created from last commit of this week.
 			$year = date('Y');
 			$week = date('W');
 		}
-		elseif ( $snapshot_mode === self::SNAPSHOT_MODE_PREV_WEEK ) {
+		elseif ( $stability === self::STABILITY_SNAPSHOT ) {
+			// Snapshot release is created from last commit of previous week.
 			list($year, $week) = $this->_subtractWeek(date('Y'), date('W'));
 		}
 		else {
-			throw new \InvalidArgumentException('Snapshot mode "' . $snapshot_mode . '" is unknown.');
+			throw new \InvalidArgumentException('Stability "' . $stability . '" is unknown.');
 		}
 
 		$commit_data = $this->_getLastCommitOfWeek($year, $week);
 
 		if ( $commit_data ) {
-			$this->_doCreateSnapshotRelease($commit_data[0], $commit_data[1]);
+			$this->_doCreateRelease($commit_data[0], $commit_data[1], $stability);
 		}
 	}
 
@@ -213,28 +215,30 @@ class ReleaseManager
 	 *
 	 * @param string $commit_hash Commit hash.
 	 * @param string $commit_date Commit date.
+	 * @param string $stability   Stability.
 	 *
 	 * @return void
 	 */
-	private function _doCreateSnapshotRelease($commit_hash, $commit_date)
+	private function _doCreateRelease($commit_hash, $commit_date, $stability)
 	{
 		$sql = 'SELECT version_name
 				FROM releases
 				WHERE version_name = :version';
 		$found_version = $this->_db->fetchValue($sql, array('version' => $commit_hash));
 
+		// TODO: When "preview" and "snapshot" release point to same commit only one will be created.
 		if ( $found_version === $commit_hash ) {
 			return;
 		}
 
-		list($phar_download_url, $signature_download_url) = $this->_createPhar($commit_hash);
+		list($phar_download_url, $signature_download_url) = $this->_createPhar($commit_hash, $stability);
 
 		$bind_params = array(
 			'version_name' => $commit_hash,
 			'release_date' => strtotime($commit_date),
 			'phar_download_url' => $phar_download_url,
 			'signature_download_url' => $signature_download_url,
-			'stability' => self::STABILITY_SNAPSHOT,
+			'stability' => $stability,
 		);
 
 		$sql = 'INSERT INTO releases (version_name, release_date, phar_download_url, signature_download_url, stability)
@@ -246,10 +250,11 @@ class ReleaseManager
 	 * Creates phar.
 	 *
 	 * @param string $commit_hash Commit hash.
+	 * @param string $stability   Stability.
 	 *
 	 * @return array
 	 */
-	private function _createPhar($commit_hash)
+	private function _createPhar($commit_hash, $stability)
 	{
 		$this->_gitCommand('checkout', array($commit_hash));
 
@@ -265,7 +270,7 @@ class ReleaseManager
 		$signature_file = $this->_snapshotsPath . '/svn-buddy.phar.sig';
 
 		return $this->_uploadToS3(
-			'snapshots/' . $commit_hash,
+			$stability . 's/' . $commit_hash,
 			array($phar_file, $signature_file)
 		);
 	}
@@ -273,13 +278,16 @@ class ReleaseManager
 	/**
 	 * Deletes old snapshots.
 	 *
+	 * @param string $stability Stability.
+	 * @param string $threshold Threshold.
+	 *
 	 * @return void
 	 */
-	public function deleteOldSnapshots()
+	public function deleteOldSnapshots($stability, $threshold)
 	{
 		$latest_versions = $this->getLatestVersionsForStability();
 
-		if ( !isset($latest_versions[self::STABILITY_SNAPSHOT]) ) {
+		if ( !isset($latest_versions[$stability]) ) {
 			return;
 		}
 
@@ -288,9 +296,9 @@ class ReleaseManager
 				WHERE stability = :stability AND release_date < :release_date AND version_name != :latest_version
 				ORDER BY release_date ASC';
 		$versions = $this->_db->fetchCol($sql, array(
-			'stability' => self::STABILITY_SNAPSHOT,
-			'release_date' => strtotime('-' . self::SNAPSHOT_LIFETIME),
-			'latest_version' => $latest_versions[self::STABILITY_SNAPSHOT]['version'],
+			'stability' => $stability,
+			'release_date' => strtotime('-' . $threshold),
+			'latest_version' => $latest_versions[$stability]['version'],
 		));
 
 		if ( !$versions ) {
@@ -469,7 +477,7 @@ class ReleaseManager
 	 */
 	private function _resolveStabilityVersion($version)
 	{
-		$stabilities = array(self::STABILITY_SNAPSHOT, self::STABILITY_STABLE);
+		$stabilities = array(self::STABILITY_PREVIEW, self::STABILITY_SNAPSHOT, self::STABILITY_STABLE);
 
 		if ( in_array($version, $stabilities) ) {
 			$stability = $version;

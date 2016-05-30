@@ -33,13 +33,7 @@ class CreateSnapshotCommand extends AbstractCommand
 	{
 		$this
 			->setName('snapshot:create')
-			->setDescription('Creates snapshot releases')
-			->addOption(
-				'force',
-				null,
-				InputOption::VALUE_NONE,
-				'Create snapshot for latest commit'
-			);
+			->setDescription('Creates unstable (preview and snapshot) releases');
 	}
 
 	/**
@@ -58,14 +52,12 @@ class CreateSnapshotCommand extends AbstractCommand
 	 */
 	protected function execute(InputInterface $input, OutputInterface $output)
 	{
-		if ( $this->io->getOption('force') ) {
-			$this->_releaseManager->createSnapshotRelease(ReleaseManager::SNAPSHOT_MODE_THIS_WEEK);
-		}
-		else {
-			$this->_releaseManager->createSnapshotRelease(ReleaseManager::SNAPSHOT_MODE_PREV_WEEK);
-		}
+		$this->_releaseManager->createRelease(ReleaseManager::STABILITY_PREVIEW);
+		$this->_releaseManager->deleteOldSnapshots(ReleaseManager::STABILITY_PREVIEW, '3 days');
 
-		$this->_releaseManager->deleteOldSnapshots();
+		$this->_releaseManager->createRelease(ReleaseManager::STABILITY_SNAPSHOT);
+		$this->_releaseManager->deleteOldSnapshots(ReleaseManager::STABILITY_SNAPSHOT, '3 weeks');
+
 		$this->io->writeln('Created missing snapshot releases.');
 	}
 
