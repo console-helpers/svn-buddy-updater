@@ -259,7 +259,12 @@ class ReleaseManager
 	 */
 	protected function getVersionFromCommit($commit_hash, $stability)
 	{
-		return $stability . '.' . $commit_hash;
+		$git_version = $this->_gitCommand('describe', array(
+			$commit_hash,
+			'--tags',
+		));
+
+		return $stability . ':' . trim($git_version);
 	}
 
 	/**
