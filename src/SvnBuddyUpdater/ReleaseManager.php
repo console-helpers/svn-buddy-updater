@@ -370,7 +370,7 @@ class ReleaseManager
 		$sql = 'DELETE FROM releases
 				WHERE version_name IN (:versions)';
 		$this->_db->perform($sql, array(
-			'versions' => $releases,
+			'versions' => $versions,
 		));
 		$this->_io->writeln('done');
 	}
