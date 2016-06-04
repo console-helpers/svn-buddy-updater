@@ -13,6 +13,7 @@ namespace ConsoleHelpers\SvnBuddyUpdater;
 
 use Aura\Sql\ExtendedPdoInterface;
 use Aws\S3\S3Client;
+use ConsoleHelpers\ConsoleKit\ConsoleIO;
 use Github\Client;
 use Github\HttpClient\CachedHttpClient;
 use Symfony\Component\Process\ProcessBuilder;
@@ -69,13 +70,22 @@ class ReleaseManager
 	private $_s3BucketName;
 
 	/**
+	 * Console IO.
+	 *
+	 * @var ConsoleIO
+	 */
+	private $_io;
+
+	/**
 	 * Creates release manager instance.
 	 *
 	 * @param ExtendedPdoInterface $db Database.
+	 * @param ConsoleIO            $io Console IO.
 	 */
-	public function __construct(ExtendedPdoInterface $db)
+	public function __construct(ExtendedPdoInterface $db, ConsoleIO $io)
 	{
 		$this->_db = $db;
+		$this->_io = $io;
 		$this->_repositoryPath = realpath(__DIR__ . '/../../workspace/repository');
 		$this->_snapshotsPath = realpath(__DIR__ . '/../../workspace/snapshots');
 		$this->_s3BucketName = $_SERVER['S3_BUCKET'];
@@ -89,8 +99,9 @@ class ReleaseManager
 	public function syncReleasesFromGitHub()
 	{
 		$this->_deleteReleases(self::STABILITY_STABLE);
+		$github_releases = $this->_getReleasesFromGitHub();
 
-		foreach ( $this->_getReleasesFromGitHub() as $release_data ) {
+		foreach ( $github_releases as $release_data ) {
 			$bind_params = array(
 				'version_name' => $release_data['name'],
 				'release_date' => strtotime($release_data['published_at']),
@@ -111,6 +122,8 @@ class ReleaseManager
 					VALUES (:version_name, :release_date, :phar_download_url, :signature_download_url, :stability)';
 			$this->_db->perform($sql, $bind_params);
 		}
+
+		$this->_io->writeln('Added <info>' . count($github_releases) . ' stable</info> releases from GitHub.');
 	}
 
 	/**
@@ -133,27 +146,17 @@ class ReleaseManager
 	 * @param integer $stability Stability.
 	 *
 	 * @return void
-	 * @throws \InvalidArgumentException When invalid snapshot mode is given.
 	 */
 	public function createRelease($stability)
 	{
+		$this->_io->write('1. updating cloned repository ... ');
 		$this->_gitCommand('checkout', array('master'));
 		$this->_gitCommand('pull');
+		$this->_io->writeln('done');
 
-		if ( $stability === self::STABILITY_PREVIEW ) {
-			// Preview release is created from last commit of this week.
-			$year = date('Y');
-			$week = date('W');
-		}
-		elseif ( $stability === self::STABILITY_SNAPSHOT ) {
-			// Snapshot release is created from last commit of previous week.
-			list($year, $week) = $this->_subtractWeek(date('Y'), date('W'));
-		}
-		else {
-			throw new \InvalidArgumentException('Stability "' . $stability . '" is unknown.');
-		}
-
-		$commit_data = $this->_getLastCommitOfWeek($year, $week);
+		$this->_io->write('2. detecting commit for a release ... ');
+		$commit_data = $this->_getLastCommit($this->_getWeekByStability($stability));
+		$this->_io->writeln('done (<info>' . $commit_data[0] . '</info>)');
 
 		if ( $commit_data ) {
 			$this->_doCreateRelease($commit_data[0], $commit_data[1], $stability);
@@ -161,53 +164,51 @@ class ReleaseManager
 	}
 
 	/**
+	 * Returns week to base current release upon.
+	 *
+	 * @param string $stability Stability.
+	 *
+	 * @return Week
+	 * @throws \InvalidArgumentException When invalid stability is given.
+	 */
+	private function _getWeekByStability($stability)
+	{
+		if ( $stability === self::STABILITY_PREVIEW ) {
+			// Preview release is created from last commit of this week.
+			return Week::current();
+		}
+
+		if ( $stability === self::STABILITY_SNAPSHOT ) {
+			// Snapshot release is created from last commit of previous week.
+			return Week::current()->previous();
+		}
+
+		throw new \InvalidArgumentException('Stability "' . $stability . '" is unknown.');
+	}
+
+	/**
 	 * Returns commit hash/date for next snapshot release.
 	 *
-	 * @param integer $year Year.
-	 * @param integer $week Week.
+	 * @param Week $week Week.
 	 *
 	 * @return array
 	 */
-	private function _getLastCommitOfWeek($year, $week)
+	private function _getLastCommit(Week $week)
 	{
-		$week_start = strtotime($year . 'W' . $week);
-		$week_end = strtotime('+1 week -1 second', $week_start);
-
 		$output = $this->_gitCommand('log', array(
 			'--format=%H:%cd',
 			'--max-count=1',
-			'--after=' . date('Y-m-d H:i:s', $week_start),
-			'--before=' . date('Y-m-d H:i:s', $week_end),
+			'--after=' . date('Y-m-d H:i:s', $week->getStart()),
+			'--before=' . date('Y-m-d H:i:s', $week->getEnd()),
 		));
 		$output = trim($output);
 
 		// No commits in given week > try previous week.
 		if ( !$output ) {
-			list($prev_week_year, $prev_week) = $this->_subtractWeek($year, $week);
-
-			return $this->_getLastCommitOfWeek($prev_week_year, $prev_week);
+			return $this->_getLastCommit($week->previous());
 		}
 
 		return explode(':', $output, 2);
-	}
-
-	/**
-	 * Subtracts one week.
-	 *
-	 * @param integer $year Year.
-	 * @param integer $week Week.
-	 *
-	 * @return array
-	 */
-	private function _subtractWeek($year, $week)
-	{
-		$this_monday = strtotime($year . 'W' . $week);
-		$prev_sunday = strtotime('-1 second', $this_monday);
-
-		return array(
-			date('Y', $prev_sunday),
-			date('W', $prev_sunday),
-		);
 	}
 
 	/**
@@ -221,6 +222,7 @@ class ReleaseManager
 	 */
 	private function _doCreateRelease($commit_hash, $commit_date, $stability)
 	{
+		$this->_io->writeln('3. creating <info>' . $stability . '</info> release');
 		$version = $this->getVersionFromCommit($commit_hash, $stability);
 
 		$sql = 'SELECT version_name
@@ -230,7 +232,9 @@ class ReleaseManager
 			'version' => $version,
 		));
 
-		if ( $found_version === $commit_hash ) {
+		if ( $found_version !== false ) {
+			$this->_io->writeln(' * release for <info>' . $version . '</info> version already exists');
+
 			return;
 		}
 
@@ -247,6 +251,8 @@ class ReleaseManager
 		$sql = 'INSERT INTO releases (version_name, release_date, phar_download_url, signature_download_url, stability)
 				VALUES (:version_name, :release_date, :phar_download_url, :signature_download_url, :stability)';
 		$this->_db->perform($sql, $bind_params);
+
+		$this->_io->writeln(' * release for <info>' . $version . '</info> version created');
 	}
 
 	/**
@@ -277,6 +283,7 @@ class ReleaseManager
 	 */
 	private function _createPhar($commit_hash, $stability)
 	{
+		$this->_io->write(' * creating phar file ... ');
 		$this->_gitCommand('checkout', array($commit_hash));
 
 		$this->_shellCommand(
@@ -284,8 +291,10 @@ class ReleaseManager
 			array(
 				'dev:phar-create',
 				'--build-dir=' . $this->_snapshotsPath,
+				'--stability=' . $stability,
 			)
 		);
+		$this->_io->writeln('done');
 
 		$phar_file = $this->_snapshotsPath . '/svn-buddy.phar';
 		$signature_file = $this->_snapshotsPath . '/svn-buddy.phar.sig';
@@ -297,42 +306,50 @@ class ReleaseManager
 	}
 
 	/**
-	 * Deletes old snapshots.
+	 * Deletes old releases.
 	 *
 	 * @param string $stability Stability.
 	 * @param string $threshold Threshold.
 	 *
 	 * @return void
 	 */
-	public function deleteOldSnapshots($stability, $threshold)
+	public function deleteOldReleases($stability, $threshold)
 	{
+		$this->_io->writeln(
+			'Deleting <info>' . $stability . '</info> releases older then <info>' . $threshold . '</info>.'
+		);
 		$latest_versions = $this->getLatestVersionsForStability();
 
 		if ( !isset($latest_versions[$stability]) ) {
+			$this->_io->writeln(' * none found');
+
 			return;
 		}
 
-		$sql = 'SELECT version_name
+		$sql = 'SELECT version_name, phar_download_url, signature_download_url
 				FROM releases
 				WHERE stability = :stability AND release_date < :release_date AND version_name != :latest_version
 				ORDER BY release_date ASC';
-		$versions = $this->_db->fetchCol($sql, array(
+		$releases = $this->_db->fetchAll($sql, array(
 			'stability' => $stability,
 			'release_date' => strtotime('-' . $threshold),
 			'latest_version' => $latest_versions[$stability]['version'],
 		));
 
-		if ( !$versions ) {
+		if ( !$releases ) {
+			$this->_io->writeln(' * none found');
+
 			return;
 		}
 
 		// Delete associated S3 objects.
+		$this->_io->write(' * deleting from s3 ... ');
 		$s3_objects = array();
 
-		foreach ( $versions as $version ) {
-			$s3_objects[] = array('Key' => 'snapshots/' . $version . '/svn-buddy.phar');
-			$s3_objects[] = array('Key' => 'snapshots/' . $version . '/svn-buddy.phar.sig');
-			$s3_objects[] = array('Key' => 'snapshots/' . $version);
+		foreach ( $releases as $release_data ) {
+			$s3_objects[] = array('Key' => $this->_getS3ObjectPath($release_data['phar_download_url']));
+			$s3_objects[] = array('Key' => $this->_getS3ObjectPath($release_data['signature_download_url']));
+			$s3_objects[] = array('Key' => dirname($this->_getS3ObjectPath($release_data['signature_download_url'])));
 		}
 
 		$s3 = S3Client::factory();
@@ -340,13 +357,34 @@ class ReleaseManager
 			'Bucket' => $this->_s3BucketName,
 			'Objects' => $s3_objects,
 		));
+		$this->_io->writeln('done');
 
 		// Delete versions.
+		$this->_io->write(' * deleting from database ... ');
+		$versions = array();
+
+		foreach ( $releases as $release_data ) {
+			$versions[] = $release_data['version_name'];
+		}
+
 		$sql = 'DELETE FROM releases
 				WHERE version_name IN (:versions)';
 		$this->_db->perform($sql, array(
-			'versions' => $versions,
+			'versions' => $releases,
 		));
+		$this->_io->writeln('done');
+	}
+
+	/**
+	 * Returns path to S3 object.
+	 *
+	 * @param string $url Url.
+	 *
+	 * @return string
+	 */
+	private function _getS3ObjectPath($url)
+	{
+		return ltrim(parse_url($url, PHP_URL_PATH), '/');
 	}
 
 	/**
@@ -359,6 +397,7 @@ class ReleaseManager
 	 */
 	private function _uploadToS3($parent_folder, array $files)
 	{
+		$this->_io->write(' * uploading to s3 ... ');
 		$urls = array();
 		$s3 = S3Client::factory();
 
@@ -372,6 +411,8 @@ class ReleaseManager
 
 			$urls[$index] = $uploaded->get('ObjectURL');
 		}
+
+		$this->_io->writeln('done');
 
 		return $urls;
 	}
@@ -387,9 +428,11 @@ class ReleaseManager
 	{
 		$sql = 'DELETE FROM releases
 				WHERE stability = :stability';
-		$this->_db->perform($sql, array(
+		$rows_affected = $this->_db->fetchAffected($sql, array(
 			'stability' => $stability,
 		));
+
+		$this->_io->writeln('Deleted <info>' . $rows_affected . ' ' . $stability . '</info> releases.');
 	}
 
 	/**

@@ -53,7 +53,6 @@ class SyncReleaseCommand extends AbstractCommand
 	protected function execute(InputInterface $input, OutputInterface $output)
 	{
 		$this->_releaseManager->syncReleasesFromGitHub();
-		$this->io->writeln('Releases synchronized with GitHub.');
 	}
 
 }

@@ -46,7 +46,7 @@ class Container extends \ConsoleHelpers\ConsoleKit\Container
 		};
 
 		$this['release_manager'] = function ($c) {
-			return new ReleaseManager($c['db']);
+			return new ReleaseManager($c['db'], $c['io']);
 		};
 
 		$this['environment_patcher'] = function () {

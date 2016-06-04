@@ -53,12 +53,10 @@ class CreateSnapshotCommand extends AbstractCommand
 	protected function execute(InputInterface $input, OutputInterface $output)
 	{
 		$this->_releaseManager->createRelease(ReleaseManager::STABILITY_PREVIEW);
-		$this->_releaseManager->deleteOldSnapshots(ReleaseManager::STABILITY_PREVIEW, '3 days');
+		$this->_releaseManager->deleteOldReleases(ReleaseManager::STABILITY_PREVIEW, '3 days');
 
 		$this->_releaseManager->createRelease(ReleaseManager::STABILITY_SNAPSHOT);
-		$this->_releaseManager->deleteOldSnapshots(ReleaseManager::STABILITY_SNAPSHOT, '3 weeks');
-
-		$this->io->writeln('Created missing snapshot releases.');
+		$this->_releaseManager->deleteOldReleases(ReleaseManager::STABILITY_SNAPSHOT, '3 weeks');
 	}
 
 }
