@@ -149,12 +149,14 @@ class ReleaseManager
 	 */
 	public function createRelease($stability)
 	{
-		$this->_io->write('1. updating cloned repository ... ');
+		$this->_io->writeln('1. preparing to create <info>' . $stability . '</info> release');
+
+		$this->_io->write(' * updating cloned repository ... ');
 		$this->_gitCommand('checkout', array('master'));
 		$this->_gitCommand('pull');
 		$this->_io->writeln('done');
 
-		$this->_io->write('2. detecting commit for a release ... ');
+		$this->_io->write(' * detecting commit for a release ... ');
 		$commit_data = $this->_getLastCommit($this->_getWeekByStability($stability));
 		$this->_io->writeln('done (<info>' . $commit_data[0] . '</info>)');
 
@@ -222,7 +224,7 @@ class ReleaseManager
 	 */
 	private function _doCreateRelease($commit_hash, $commit_date, $stability)
 	{
-		$this->_io->writeln('3. creating <info>' . $stability . '</info> release');
+		$this->_io->writeln('2. creating <info>' . $stability . '</info> release');
 		$version = $this->getVersionFromCommit($commit_hash, $stability);
 
 		$sql = 'SELECT version_name
@@ -233,7 +235,7 @@ class ReleaseManager
 		));
 
 		if ( $found_version !== false ) {
-			$this->_io->writeln(' * release for <info>' . $version . '</info> version already exists');
+			$this->_io->writeln(' * release for <info>' . $version . '</info> version found > skipping');
 
 			return;
 		}
@@ -321,7 +323,7 @@ class ReleaseManager
 		$latest_versions = $this->getLatestVersionsForStability();
 
 		if ( !isset($latest_versions[$stability]) ) {
-			$this->_io->writeln(' * none found');
+			$this->_io->writeln(' * <info>0</info> found at all');
 
 			return;
 		}
@@ -337,10 +339,12 @@ class ReleaseManager
 		));
 
 		if ( !$releases ) {
-			$this->_io->writeln(' * none found');
+			$this->_io->writeln(' * <info>0</info> found that old');
 
 			return;
 		}
+
+		$this->_io->writeln(' * <info>' . count($releases) . '</info> found');
 
 		// Delete associated S3 objects.
 		$this->_io->write(' * deleting from s3 ... ');
