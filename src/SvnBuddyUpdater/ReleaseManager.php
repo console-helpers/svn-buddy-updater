@@ -156,6 +156,17 @@ class ReleaseManager
 		$this->_gitCommand('pull');
 		$this->_io->writeln('done');
 
+		$this->_io->write(' * updating dependencies ... ');
+		$this->_shellCommand(
+			'composer',
+			array(
+				'install',
+				'--no-dev',
+			),
+			$this->_repositoryPath
+		);
+		$this->_io->writeln('done');
+
 		$this->_io->write(' * detecting commit for a release ... ');
 		$commit_data = $this->_getLastCommit($this->_getWeekByStability($stability));
 		$this->_io->writeln('done (<info>' . $commit_data[0] . '</info>)');
