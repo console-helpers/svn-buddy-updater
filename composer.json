@@ -21,7 +21,7 @@
 		"aws/aws-sdk-php": "^2.8"
 	},
 	"require-dev": {
-		"heroku/heroku-buildpack-php": "^104.0",
+		"heroku/heroku-buildpack-php": "^175",
 		"aik099/coding-standard": "dev-master"
 	},
 	"autoload": {
