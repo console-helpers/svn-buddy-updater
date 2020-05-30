@@ -18,7 +18,7 @@
 		"knplabs/github-api": "^1.6",
 		"silex/silex": "^2.0",
 		"symfony/process": "^2.8",
-		"aws/aws-sdk-php": "^2.8"
+		"aws/aws-sdk-php": "^3.138"
 	},
 	"require-dev": {
 		"heroku/heroku-buildpack-php": "^104.0",
