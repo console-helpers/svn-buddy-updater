@@ -17,7 +17,7 @@
 		"console-helpers/console-kit": "^0.1",
 		"knplabs/github-api": "^1.6",
 		"silex/silex": "^2.0",
-		"symfony/process": "^2.8",
+		"symfony/process": "^3.4",
 		"aws/aws-sdk-php": "^2.8"
 	},
 	"require-dev": {
