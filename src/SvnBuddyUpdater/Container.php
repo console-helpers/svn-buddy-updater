@@ -11,8 +11,6 @@
 namespace ConsoleHelpers\SvnBuddyUpdater;
 
 
-use Aura\Sql\ExtendedPdo;
-
 class Container extends \ConsoleHelpers\ConsoleKit\Container
 {
 
@@ -31,18 +29,7 @@ class Container extends \ConsoleHelpers\ConsoleKit\Container
 		$this['config_defaults'] = array();
 
 		$this['db'] = function ($c) {
-			$url_parts = parse_url($_SERVER['DATABASE_URL']);
-
-			$dsn = sprintf(
-				'pgsql:host=%s;port=%d;dbname=%s;user=%s;password=%s',
-				$url_parts['host'],
-				$url_parts['port'],
-				ltrim($url_parts['path'], '/'),
-				$url_parts['user'],
-				$url_parts['pass']
-			);
-
-			return new ExtendedPdo($dsn);
+			return new ReleaseDatabase(__DIR__ . '/../../releases.json');
 		};
 
 		$this['release_manager'] = function ($c) {

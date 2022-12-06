@@ -10,6 +10,7 @@
 
 namespace ConsoleHelpers\SvnBuddyUpdater;
 
+
 class EnvironmentPatcher
 {
 

@@ -20,6 +20,9 @@ use Symfony\Component\Console\Command\Command;
 class Application extends BaseApplication
 {
 
+	/**
+	 * @inheritDoc
+	 */
 	public function __construct(Container $container)
 	{
 		parent::__construct($container);

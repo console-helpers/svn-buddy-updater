@@ -11,7 +11,6 @@
 namespace ConsoleHelpers\SvnBuddyUpdater;
 
 
-use Aura\Sql\ExtendedPdoInterface;
 use Aws\S3\S3Client;
 use ConsoleHelpers\ConsoleKit\ConsoleIO;
 use Github\Client;
@@ -34,7 +33,7 @@ class ReleaseManager
 	/**
 	 * Database
 	 *
-	 * @var ExtendedPdoInterface
+	 * @var ReleaseDatabase
 	 */
 	private $_db;
 
@@ -79,12 +78,12 @@ class ReleaseManager
 	/**
 	 * Creates release manager instance.
 	 *
-	 * @param ExtendedPdoInterface $db Database.
-	 * @param ConsoleIO            $io Console IO.
+	 * @param ReleaseDatabase $release_database Database.
+	 * @param ConsoleIO       $io               Console IO.
 	 */
-	public function __construct(ExtendedPdoInterface $db, ConsoleIO $io)
+	public function __construct(ReleaseDatabase $release_database, ConsoleIO $io)
 	{
-		$this->_db = $db;
+		$this->_db = $release_database;
 		$this->_io = $io;
 		$this->_repositoryPath = realpath(__DIR__ . '/../../workspace/repository');
 		$this->_snapshotsPath = realpath(__DIR__ . '/../../workspace/snapshots');
@@ -102,25 +101,26 @@ class ReleaseManager
 		$github_releases = $this->_getReleasesFromGitHub();
 
 		foreach ( $github_releases as $release_data ) {
-			$bind_params = array(
-				'version_name' => $release_data['name'],
-				'release_date' => strtotime($release_data['published_at']),
+			$assets = array(
 				'phar_download_url' => '',
 				'signature_download_url' => '',
-				'stability' => self::STABILITY_STABLE,
 			);
 
 			foreach ( $release_data['assets'] as $asset_data ) {
 				$asset_name = $asset_data['name'];
 
 				if ( isset($this->_fileMapping[$asset_name]) ) {
-					$bind_params[$this->_fileMapping[$asset_name]] = $asset_data['browser_download_url'];
+					$assets[$this->_fileMapping[$asset_name]] = $asset_data['browser_download_url'];
 				}
 			}
 
-			$sql = 'INSERT INTO releases (version_name, release_date, phar_download_url, signature_download_url, stability)
-					VALUES (:version_name, :release_date, :phar_download_url, :signature_download_url, :stability)';
-			$this->_db->perform($sql, $bind_params);
+			$this->_db->add(
+				$release_data['name'],
+				strtotime($release_data['published_at']),
+				$assets['phar_download_url'],
+				$assets['signature_download_url'],
+				self::STABILITY_STABLE
+			);
 		}
 
 		$this->_io->writeln('Added <info>' . count($github_releases) . ' stable</info> releases from GitHub.');
@@ -238,14 +238,9 @@ class ReleaseManager
 		$this->_io->writeln('2. creating <info>' . $stability . '</info> release');
 		$version = $this->getVersionFromCommit($commit_hash, $stability);
 
-		$sql = 'SELECT version_name
-				FROM releases
-				WHERE version_name = :version';
-		$found_version = $this->_db->fetchValue($sql, array(
-			'version' => $version,
-		));
+		$found_version = $this->_db->getField($version, 'version_name');
 
-		if ( $found_version !== false ) {
+		if ( $found_version !== null ) {
 			$this->_io->writeln(' * release for <info>' . $version . '</info> version found > skipping');
 
 			return;
@@ -253,17 +248,13 @@ class ReleaseManager
 
 		list($phar_download_url, $signature_download_url) = $this->_createPhar($commit_hash, $stability);
 
-		$bind_params = array(
-			'version_name' => $version,
-			'release_date' => strtotime($commit_date),
-			'phar_download_url' => $phar_download_url,
-			'signature_download_url' => $signature_download_url,
-			'stability' => $stability,
+		$this->_db->add(
+			$version,
+			strtotime($commit_date),
+			$phar_download_url,
+			$signature_download_url,
+			$stability
 		);
-
-		$sql = 'INSERT INTO releases (version_name, release_date, phar_download_url, signature_download_url, stability)
-				VALUES (:version_name, :release_date, :phar_download_url, :signature_download_url, :stability)';
-		$this->_db->perform($sql, $bind_params);
 
 		$this->_io->writeln(' * release for <info>' . $version . '</info> version created');
 	}
@@ -331,23 +322,19 @@ class ReleaseManager
 		$this->_io->writeln(
 			'Deleting <info>' . $stability . '</info> releases older then <info>' . $threshold . '</info>.'
 		);
-		$latest_versions = $this->getLatestVersionsForStability();
+		$latest_versions = $this->_db->getLatestVersionsForStability();
 
-		if ( !isset($latest_versions[$stability]) ) {
+		if ( $latest_versions[$stability] === null ) {
 			$this->_io->writeln(' * <info>0</info> found at all');
 
 			return;
 		}
 
-		$sql = 'SELECT version_name, phar_download_url, signature_download_url
-				FROM releases
-				WHERE stability = :stability AND release_date < :release_date AND version_name != :latest_version
-				ORDER BY release_date ASC';
-		$releases = $this->_db->fetchAll($sql, array(
-			'stability' => $stability,
-			'release_date' => strtotime('-' . $threshold),
-			'latest_version' => $latest_versions[$stability]['version'],
-		));
+		$releases = $this->_db->findByStabilityAndMaxDateWithException(
+			$stability,
+			strtotime('-' . $threshold),
+			$latest_versions[$stability]
+		);
 
 		if ( !$releases ) {
 			$this->_io->writeln(' * <info>0</info> found that old');
@@ -382,11 +369,8 @@ class ReleaseManager
 			$versions[] = $release_data['version_name'];
 		}
 
-		$sql = 'DELETE FROM releases
-				WHERE version_name IN (:versions)';
-		$this->_db->perform($sql, array(
-			'versions' => $versions,
-		));
+		$this->_db->deleteByVersions($versions);
+
 		$this->_io->writeln('done');
 	}
 
@@ -441,11 +425,7 @@ class ReleaseManager
 	 */
 	private function _deleteReleases($stability)
 	{
-		$sql = 'DELETE FROM releases
-				WHERE stability = :stability';
-		$rows_affected = $this->_db->fetchAffected($sql, array(
-			'stability' => $stability,
-		));
+		$rows_affected = $this->_db->deleteByStability($stability);
 
 		$this->_io->writeln('Deleted <info>' . $rows_affected . ' ' . $stability . '</info> releases.');
 	}
@@ -483,91 +463,6 @@ class ReleaseManager
 			->getProcess();
 
 		return $process->mustRun()->getOutput();
-	}
-
-	/**
-	 * Returns latest versions for each stability.
-	 *
-	 * @return array
-	 */
-	public function getLatestVersionsForStability()
-	{
-		$sql = 'SELECT stability, MAX(release_date)
-				FROM releases
-				GROUP BY stability';
-		$stabilities = $this->_db->fetchPairs($sql);
-
-		$versions = array();
-
-		foreach ( $stabilities as $stability => $release_date ) {
-			$sql = 'SELECT version_name
-					FROM releases
-					WHERE stability = :stability AND release_date = :release_date';
-			$release_data = $this->_db->fetchOne($sql, array(
-				'stability' => $stability,
-				'release_date' => $release_date,
-			));
-
-			$versions[$stability] = array(
-				'path' => '/download/' . $release_data['version_name'] . '/svn-buddy.phar',
-				'version' => $release_data['version_name'],
-				'min-php' => 50300,
-			);
-		}
-
-		return $versions;
-	}
-
-	/**
-	 * Returns download url for version.
-	 *
-	 * @param string $version Version.
-	 * @param string $file    File.
-	 *
-	 * @return string
-	 */
-	public function getDownloadUrl($version, $file)
-	{
-		$file_mapping = array(
-			'svn-buddy.phar' => 'phar_download_url',
-			'svn-buddy.phar.sig' => 'signature_download_url',
-		);
-
-		if ( !isset($this->_fileMapping[$file]) ) {
-			return '';
-		}
-
-		$sql = 'SELECT ' . $file_mapping[$file] . '
-				FROM releases
-				WHERE version_name = :version';
-		$download_url = $this->_db->fetchValue($sql, array(
-			'version' => $this->_resolveStabilityVersion($version),
-		));
-
-		return (string)$download_url;
-	}
-
-	/**
-	 * In case, when version is in fact stability return latest version for stability.
-	 *
-	 * @param string $version Version.
-	 *
-	 * @return string
-	 */
-	private function _resolveStabilityVersion($version)
-	{
-		$stabilities = array(self::STABILITY_PREVIEW, self::STABILITY_SNAPSHOT, self::STABILITY_STABLE);
-
-		if ( in_array($version, $stabilities) ) {
-			$stability = $version;
-			$latest_versions = $this->getLatestVersionsForStability();
-
-			if ( isset($latest_versions[$stability]) ) {
-				return $latest_versions[$stability]['version'];
-			}
-		}
-
-		return $version;
 	}
 
 }
