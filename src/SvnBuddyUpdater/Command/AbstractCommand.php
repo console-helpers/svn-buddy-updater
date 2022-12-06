@@ -28,7 +28,6 @@ abstract class AbstractCommand extends BaseCommand
 	{
 		$container = $this->getContainer();
 
-
 	}
 
 }

@@ -1,0 +1,73 @@
+{
+    "preview": {
+        "preview:v0.6.0": {
+            "release_date": 1668422920,
+            "phar_download_url": "https:\/\/svn-buddy-updater.s3.amazonaws.com\/previews\/7b85218052dfb7fe26869f096b4a50d0e906a2af\/svn-buddy.phar",
+            "signature_download_url": "https:\/\/svn-buddy-updater.s3.amazonaws.com\/previews\/7b85218052dfb7fe26869f096b4a50d0e906a2af\/svn-buddy.phar.sig"
+        }
+    },
+    "snapshot": {
+        "snapshot:v0.6.0": {
+            "release_date": 1668422920,
+            "phar_download_url": "https:\/\/svn-buddy-updater.s3.amazonaws.com\/snapshots\/7b85218052dfb7fe26869f096b4a50d0e906a2af\/svn-buddy.phar",
+            "signature_download_url": "https:\/\/svn-buddy-updater.s3.amazonaws.com\/snapshots\/7b85218052dfb7fe26869f096b4a50d0e906a2af\/svn-buddy.phar.sig"
+        }
+    },
+    "stable": {
+        "v0.6.0": {
+            "release_date": 1668423005,
+            "phar_download_url": "https:\/\/github.com\/console-helpers\/svn-buddy\/releases\/download\/v0.6.0\/svn-buddy.phar",
+            "signature_download_url": "https:\/\/github.com\/console-helpers\/svn-buddy\/releases\/download\/v0.6.0\/svn-buddy.phar.sig"
+        },
+        "v0.5.1": {
+            "release_date": 1558428774,
+            "phar_download_url": "https:\/\/github.com\/console-helpers\/svn-buddy\/releases\/download\/v0.5.1\/svn-buddy.phar",
+            "signature_download_url": "https:\/\/github.com\/console-helpers\/svn-buddy\/releases\/download\/v0.5.1\/svn-buddy.phar.sig"
+        },
+        "v0.5.0": {
+            "release_date": 1553940187,
+            "phar_download_url": "https:\/\/github.com\/console-helpers\/svn-buddy\/releases\/download\/v0.5.0\/svn-buddy.phar",
+            "signature_download_url": "https:\/\/github.com\/console-helpers\/svn-buddy\/releases\/download\/v0.5.0\/svn-buddy.phar.sig"
+        },
+        "v0.4.0": {
+            "release_date": 1518341725,
+            "phar_download_url": "https:\/\/github.com\/console-helpers\/svn-buddy\/releases\/download\/v0.4.0\/svn-buddy.phar",
+            "signature_download_url": "https:\/\/github.com\/console-helpers\/svn-buddy\/releases\/download\/v0.4.0\/svn-buddy.phar.sig"
+        },
+        "v0.3.0": {
+            "release_date": 1473320674,
+            "phar_download_url": "https:\/\/github.com\/console-helpers\/svn-buddy\/releases\/download\/v0.3.0\/svn-buddy.phar",
+            "signature_download_url": "https:\/\/github.com\/console-helpers\/svn-buddy\/releases\/download\/v0.3.0\/svn-buddy.phar.sig"
+        },
+        "v0.2.0": {
+            "release_date": 1463218460,
+            "phar_download_url": "https:\/\/github.com\/console-helpers\/svn-buddy\/releases\/download\/v0.2.0\/svn-buddy.phar",
+            "signature_download_url": "https:\/\/github.com\/console-helpers\/svn-buddy\/releases\/download\/v0.2.0\/svn-buddy.phar.sig"
+        },
+        "v0.1.0": {
+            "release_date": 1458424125,
+            "phar_download_url": "https:\/\/github.com\/console-helpers\/svn-buddy\/releases\/download\/v0.1.0\/svn-buddy.phar",
+            "signature_download_url": "https:\/\/github.com\/console-helpers\/svn-buddy\/releases\/download\/v0.1.0\/svn-buddy.phar.sig"
+        },
+        "v0.0.4": {
+            "release_date": 1449226490,
+            "phar_download_url": "https:\/\/github.com\/console-helpers\/svn-buddy\/releases\/download\/v0.0.4\/svn-buddy.phar",
+            "signature_download_url": "https:\/\/github.com\/console-helpers\/svn-buddy\/releases\/download\/v0.0.4\/svn-buddy.phar.sig"
+        },
+        "v0.0.3": {
+            "release_date": 1443266811,
+            "phar_download_url": "https:\/\/github.com\/console-helpers\/svn-buddy\/releases\/download\/v0.0.3\/svn-buddy.phar",
+            "signature_download_url": "https:\/\/github.com\/console-helpers\/svn-buddy\/releases\/download\/v0.0.3\/svn-buddy.phar.sig"
+        },
+        "v0.0.2": {
+            "release_date": 1442739721,
+            "phar_download_url": "https:\/\/github.com\/console-helpers\/svn-buddy\/releases\/download\/v0.0.2\/svn-buddy.phar",
+            "signature_download_url": "https:\/\/github.com\/console-helpers\/svn-buddy\/releases\/download\/v0.0.2\/svn-buddy.phar.sig"
+        },
+        "v0.0.1": {
+            "release_date": 1442049642,
+            "phar_download_url": "https:\/\/github.com\/console-helpers\/svn-buddy\/releases\/download\/v0.0.1\/svn-buddy.phar",
+            "signature_download_url": "https:\/\/github.com\/console-helpers\/svn-buddy\/releases\/download\/v0.0.1\/svn-buddy.phar.sig"
+        }
+    }
+}
