@@ -7,14 +7,14 @@ on:
     branches: [ master ]
   workflow_dispatch:
     inputs:
-    command_name:
-      description: 'Command Name'
-      required: true
-      default: 'snapshot:create'
-      type: choice
-      options:
-        - snapshot:create
-        - release:sync
+      command_name:
+        description: 'Command Name'
+        required: true
+        default: 'snapshot:create'
+        type: choice
+        options:
+          - snapshot:create
+          - release:sync
   schedule:
     - cron: '0 1 * * *'
 
