@@ -1,4 +1,4 @@
-name: Create a snapshot release
+name: Release routines
 
 on:
   push:
@@ -6,6 +6,15 @@ on:
   pull_request:
     branches: [ master ]
   workflow_dispatch:
+    inputs:
+    command_name:
+      description: 'Command Name'
+      required: true
+      default: 'snapshot:create'
+      type: choice
+      options:
+        - snapshot:create
+        - release:sync
   schedule:
     - cron: '0 1 * * *'
 
@@ -49,12 +58,15 @@ jobs:
           git clone https://github.com/console-helpers/svn-buddy.git workspace/repository
           composer --working-dir=workspace/repository install --no-dev
 
-      - name: Create a snapshot release
+      - name: Execute release routine
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           S3_BUCKET: ${{ secrets.S3_BUCKET }}
-        run: bin/svn-buddy-updater snapshot:create
+        run: |
+          USER_INPUT=${{ inputs.command_name }}
+          COMMAND_NAME=${USER_INPUT:-"snapshot:create"}
+          bin/svn-buddy-updater $COMMAND_NAME
 
       - name: Commit releases database
         uses: stefanzweifel/git-auto-commit-action@v4
