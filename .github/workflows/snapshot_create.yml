@@ -44,3 +44,9 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           S3_BUCKET: ${{ secrets.S3_BUCKET }}
         run: bin/svn-buddy-updater snapshot:create
+
+      - name: Commit releases database
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: Commit releases database
+          file_pattern: 'releases.json'
