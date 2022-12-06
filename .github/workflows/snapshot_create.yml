@@ -36,7 +36,18 @@ jobs:
       - name: Install Dependencies
         run: |
           composer install --prefer-dist
-          composer compile --no-dev --no-interaction
+
+      - name: Install Box Project
+        run: |
+          wget https://github.com/box-project/box/releases/download/3.9.1/box.phar
+          chmod +x box.phar
+          mv box.phar /usr/local/bin/box
+
+      - name: Prepare SVN-Buddy installation
+        run: |
+          rm -Rf workspace/repository
+          git clone https://github.com/console-helpers/svn-buddy.git workspace/repository
+          composer --working-dir=workspace/repository install --no-dev
 
       - name: Create a snapshot release
         env:
