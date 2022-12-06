@@ -80,6 +80,8 @@ class ReleaseManager
 	 *
 	 * @param ReleaseDatabase $release_database Database.
 	 * @param ConsoleIO       $io               Console IO.
+	 *
+	 * @throws \RuntimeException When Amazon AWS S3 bucket isn't specified.
 	 */
 	public function __construct(ReleaseDatabase $release_database, ConsoleIO $io)
 	{
@@ -87,6 +89,11 @@ class ReleaseManager
 		$this->_io = $io;
 		$this->_repositoryPath = realpath(__DIR__ . '/../../workspace/repository');
 		$this->_snapshotsPath = realpath(__DIR__ . '/../../workspace/snapshots');
+
+		if ( empty($_SERVER['S3_BUCKET']) ) {
+			throw new \RuntimeException('The Amazon AWS S3 bucket is not specified.');
+		}
+
 		$this->_s3BucketName = $_SERVER['S3_BUCKET'];
 	}
 
@@ -393,9 +400,14 @@ class ReleaseManager
 	 * @param array  $files         Files.
 	 *
 	 * @return array
+	 * @throws \RuntimeException When Amazon AWS credentials are not specified.
 	 */
 	private function _uploadToS3($parent_folder, array $files)
 	{
+		if ( empty($_SERVER['AWS_ACCESS_KEY_ID']) || empty($_SERVER['AWS_SECRET_ACCESS_KEY']) ) {
+			throw new \RuntimeException('The Amazon AWS credentials are not specified.');
+		}
+
 		$this->_io->write(' * uploading to s3 ... ');
 		$urls = array();
 		$s3 = S3Client::factory();
