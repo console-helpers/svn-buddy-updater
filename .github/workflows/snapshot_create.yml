@@ -66,7 +66,7 @@ jobs:
         run: |
           USER_INPUT=${{ inputs.command_name }}
           COMMAND_NAME=${USER_INPUT:-"snapshot:create"}
-          bin/svn-buddy-updater $COMMAND_NAME
+          bin/svn-buddy-updater $COMMAND_NAME --ansi
 
       - name: Commit releases database
         uses: stefanzweifel/git-auto-commit-action@v4
