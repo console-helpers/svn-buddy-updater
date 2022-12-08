@@ -16,7 +16,7 @@ on:
           - snapshot:create
           - release:sync
   schedule:
-    - cron: '0 1 * * *'
+    - cron: '10 0 * * *'
 
 jobs:
   build:
