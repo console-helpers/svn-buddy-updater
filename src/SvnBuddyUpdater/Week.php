@@ -60,13 +60,27 @@ class Week
 	 */
 	public function previous()
 	{
-		$this_monday = $this->getStart();
-		$prev_sunday = strtotime('-1 second', $this_monday);
+		$correct_this_monday = $this->getStart();
+		$correct_prev_sunday = strtotime('-1 second', $correct_this_monday);
 
-		return new self(
-			date('Y', $prev_sunday),
-			date('W', $prev_sunday)
-		);
+		$prev_year = date('Y', $correct_prev_sunday);
+		$prev_week = date('W', $correct_prev_sunday);
+		$ret = new self($prev_year, $prev_week);
+
+		$prev_monday = $ret->getStart();
+		$prev_sunday = $ret->getEnd();
+
+		if ( $correct_prev_sunday >= $prev_monday && $correct_prev_sunday <= $prev_sunday ) {
+			return $ret;
+		}
+
+		// If timestamp earlier than interval, then decrease year (case with timestamp from 01/01/2021).
+		if ( $correct_prev_sunday < $prev_monday ) {
+			return new self($prev_year - 1, $prev_week);
+		}
+
+		// Case with timestamp from 12/31/2019.
+		return new self($prev_year + 1, $prev_week);
 	}
 
 	/**
@@ -76,7 +90,7 @@ class Week
 	 */
 	public function getStart()
 	{
-		return strtotime($this->_year . 'W' . $this->_week);
+		return strtotime($this->_year . 'W' . \str_pad($this->_week, 2, '0', \STR_PAD_LEFT));
 	}
 
 	/**

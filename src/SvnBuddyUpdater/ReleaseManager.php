@@ -144,6 +144,8 @@ class ReleaseManager
 			new CachedHttpClient(array('cache_dir' => '/tmp/github-api-cache'))
 		);
 
+		$client->authenticate($_SERVER['GH_TOKEN'], null, Client::AUTH_HTTP_TOKEN);
+
 		return $client->api('repo')->releases()->all('console-helpers', 'svn-buddy');
 	}
 
