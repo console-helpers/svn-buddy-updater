@@ -9,23 +9,18 @@
             "release_date": 1712909746,
             "phar_download_url": "https:\/\/svn-buddy-updater.s3.amazonaws.com\/previews\/52d04d90e405926873d485b70b9cf02359190756\/svn-buddy.phar",
             "signature_download_url": "https:\/\/svn-buddy-updater.s3.amazonaws.com\/previews\/52d04d90e405926873d485b70b9cf02359190756\/svn-buddy.phar.sig"
-        },
-        "preview:v0.6.1-60-g735070f": {
-            "release_date": 1712853216,
-            "phar_download_url": "https:\/\/svn-buddy-updater.s3.amazonaws.com\/previews\/735070ffaa7cc3a5c1db8927617c290ea7fd3148\/svn-buddy.phar",
-            "signature_download_url": "https:\/\/svn-buddy-updater.s3.amazonaws.com\/previews\/735070ffaa7cc3a5c1db8927617c290ea7fd3148\/svn-buddy.phar.sig"
         }
     },
     "snapshot": {
+        "snapshot:v0.7.0-1-gf5ca593": {
+            "release_date": 1712918109,
+            "phar_download_url": "https:\/\/svn-buddy-updater.s3.amazonaws.com\/snapshots\/f5ca593405cca4aa9f20a3da1ec7e4da9c204042\/svn-buddy.phar",
+            "signature_download_url": "https:\/\/svn-buddy-updater.s3.amazonaws.com\/snapshots\/f5ca593405cca4aa9f20a3da1ec7e4da9c204042\/svn-buddy.phar.sig"
+        },
         "snapshot:v0.6.1-57-g49e1981": {
             "release_date": 1711884038,
             "phar_download_url": "https:\/\/svn-buddy-updater.s3.amazonaws.com\/snapshots\/49e1981669fc652a842b0fa9bfc99a92474daf30\/svn-buddy.phar",
             "signature_download_url": "https:\/\/svn-buddy-updater.s3.amazonaws.com\/snapshots\/49e1981669fc652a842b0fa9bfc99a92474daf30\/svn-buddy.phar.sig"
-        },
-        "snapshot:v0.6.1-36-ge91965c": {
-            "release_date": 1711295863,
-            "phar_download_url": "https:\/\/svn-buddy-updater.s3.amazonaws.com\/snapshots\/e91965cdb663aae4121bfb931f8539ada65b7e5c\/svn-buddy.phar",
-            "signature_download_url": "https:\/\/svn-buddy-updater.s3.amazonaws.com\/snapshots\/e91965cdb663aae4121bfb931f8539ada65b7e5c\/svn-buddy.phar.sig"
         }
     },
     "stable": {
