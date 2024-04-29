@@ -7,6 +7,11 @@
         }
     },
     "snapshot": {
+        "snapshot:v0.7.0-5-gca982fa": {
+            "release_date": 1713968955,
+            "phar_download_url": "https:\/\/svn-buddy-updater.s3.amazonaws.com\/snapshots\/ca982fa1904e9c5596e48c50a7a1f5b19549024e\/svn-buddy.phar",
+            "signature_download_url": "https:\/\/svn-buddy-updater.s3.amazonaws.com\/snapshots\/ca982fa1904e9c5596e48c50a7a1f5b19549024e\/svn-buddy.phar.sig"
+        },
         "snapshot:v0.7.0-1-gf5ca593": {
             "release_date": 1712918109,
             "phar_download_url": "https:\/\/svn-buddy-updater.s3.amazonaws.com\/snapshots\/f5ca593405cca4aa9f20a3da1ec7e4da9c204042\/svn-buddy.phar",
