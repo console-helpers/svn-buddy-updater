@@ -1,9 +1,9 @@
 {
     "preview": {
-        "preview:v0.7.0-36-g07d6690": {
-            "release_date": 1725268948,
-            "phar_download_url": "https:\/\/svn-buddy-updater.s3.amazonaws.com\/previews\/07d669074f6c939dc47626cdb169bd1075687341\/svn-buddy.phar",
-            "signature_download_url": "https:\/\/svn-buddy-updater.s3.amazonaws.com\/previews\/07d669074f6c939dc47626cdb169bd1075687341\/svn-buddy.phar.sig"
+        "preview:v0.7.0-43-g96a0c37": {
+            "release_date": 1729358319,
+            "phar_download_url": "https:\/\/svn-buddy-updater.s3.amazonaws.com\/previews\/96a0c37f6556d895814d12d017902248012bb7a4\/svn-buddy.phar",
+            "signature_download_url": "https:\/\/svn-buddy-updater.s3.amazonaws.com\/previews\/96a0c37f6556d895814d12d017902248012bb7a4\/svn-buddy.phar.sig"
         }
     },
     "snapshot": {
