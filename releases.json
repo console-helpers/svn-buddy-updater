@@ -24,6 +24,11 @@
         }
     },
     "stable": {
+        "v0.8.0": {
+            "release_date": 1734551197,
+            "phar_download_url": "",
+            "signature_download_url": ""
+        },
         "v0.7.0": {
             "release_date": 1712909804,
             "phar_download_url": "https:\/\/github.com\/console-helpers\/svn-buddy\/releases\/download\/v0.7.0\/svn-buddy.phar",
