@@ -338,7 +338,9 @@ class ReleaseManager
 		exec('php ' . escapeshellarg($phar_file), $output, $exit_code);
 
 		$this->_io->writeln(array('Exit Code: ' . $exit_code, 'Output:'));
+		$this->_io->writeln('--------------');
 		$this->_io->writeln($output);
+		$this->_io->writeln('--------------');
 
 		if ( $exit_code !== 0 ) {
 			throw new CommandException('Failed to execute "' . $phar_file . '" phar file.');
