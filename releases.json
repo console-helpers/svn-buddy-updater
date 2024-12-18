@@ -1,5 +1,10 @@
 {
     "preview": {
+        "preview:v0.7.0-52-gcc6ba5e": {
+            "release_date": 1734525317,
+            "phar_download_url": "https:\/\/svn-buddy-updater.s3.amazonaws.com\/previews\/cc6ba5eef2bf245db5b1e9463a805adb1dad9102\/svn-buddy.phar",
+            "signature_download_url": "https:\/\/svn-buddy-updater.s3.amazonaws.com\/previews\/cc6ba5eef2bf245db5b1e9463a805adb1dad9102\/svn-buddy.phar.sig"
+        },
         "preview:v0.7.0-51-gd43f1a7": {
             "release_date": 1734463257,
             "phar_download_url": "https:\/\/svn-buddy-updater.s3.amazonaws.com\/previews\/d43f1a731fa0461a34cd6031401dcf7b658afade\/svn-buddy.phar",
