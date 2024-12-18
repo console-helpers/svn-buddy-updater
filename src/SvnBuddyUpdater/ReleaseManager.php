@@ -13,6 +13,7 @@ namespace ConsoleHelpers\SvnBuddyUpdater;
 
 use Aws\S3\S3Client;
 use ConsoleHelpers\ConsoleKit\ConsoleIO;
+use ConsoleHelpers\ConsoleKit\Exception\CommandException;
 use Github\Client;
 use Github\HttpClient\CachedHttpClient;
 use Symfony\Component\Process\ProcessBuilder;
@@ -312,10 +313,36 @@ class ReleaseManager
 		$phar_file = $this->_snapshotsPath . '/svn-buddy.phar';
 		$signature_file = $this->_snapshotsPath . '/svn-buddy.phar.sig';
 
+		$this->_executePhar($phar_file);
+
 		return $this->_uploadToS3(
 			$stability . 's/' . $commit_hash,
 			array($phar_file, $signature_file)
 		);
+	}
+
+	/**
+	 * Executes a PHAR file.
+	 *
+	 * @param string $phar_file Path to a PHAR file.
+	 *
+	 * @return void
+	 * @throws CommandException When PHAR execution ended with an error.
+	 */
+	private function _executePhar($phar_file)
+	{
+		$this->_io->writeln(' * executing phar file ... ');
+
+		$exit_code = 0;
+		$output = array();
+		exec('php ' . escapeshellarg($phar_file), $output, $exit_code);
+
+		$this->_io->writeln(array('Exit Code: ' . $exit_code, 'Output:'));
+		$this->_io->writeln($output);
+
+		if ( $exit_code !== 0 ) {
+			throw new CommandException('Failed to execute "' . $phar_file . '" phar file.');
+		}
 	}
 
 	/**
