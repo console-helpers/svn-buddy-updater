@@ -166,17 +166,6 @@ class ReleaseManager
 		$this->_gitCommand('pull');
 		$this->_io->writeln('done');
 
-		$this->_io->write(' * updating dependencies ... ');
-		$this->_shellCommand(
-			'composer',
-			array(
-				'install',
-				'--no-dev',
-			),
-			$this->_repositoryPath
-		);
-		$this->_io->writeln('done');
-
 		$this->_io->write(' * detecting commit for a release ... ');
 		$commit_data = $this->_getLastCommit($this->_getWeekByStability($stability));
 		$this->_io->writeln('done (<info>' . $commit_data[0] . '</info>)');
@@ -299,6 +288,22 @@ class ReleaseManager
 	{
 		$this->_io->write(' * creating phar file ... ');
 		$this->_gitCommand('checkout', array($commit_hash));
+
+		/*
+		 * Update dependencies based on code from $commit_hash commit,
+		 * because Composer configuration in it might differ from the
+		 * "master" branch.
+		 */
+		$this->_io->write(' * updating dependencies ... ');
+		$this->_shellCommand(
+			'composer',
+			array(
+				'install',
+				'--no-dev',
+			),
+			$this->_repositoryPath
+		);
+		$this->_io->writeln('done');
 
 		$this->_shellCommand(
 			$this->_repositoryPath . '/bin/svn-buddy',
