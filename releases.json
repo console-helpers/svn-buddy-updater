@@ -7,10 +7,10 @@
         }
     },
     "snapshot": {
-        "snapshot:v0.8.0": {
-            "release_date": 1734550791,
-            "phar_download_url": "https:\/\/svn-buddy-updater.s3.amazonaws.com\/snapshots\/090bee3b456e444c56b444fe0658b0d33e72e615\/svn-buddy.phar",
-            "signature_download_url": "https:\/\/svn-buddy-updater.s3.amazonaws.com\/snapshots\/090bee3b456e444c56b444fe0658b0d33e72e615\/svn-buddy.phar.sig"
+        "snapshot:v0.8.0-3-g3f5646d": {
+            "release_date": 1736955970,
+            "phar_download_url": "https:\/\/svn-buddy-updater.s3.amazonaws.com\/snapshots\/3f5646dc0967c2dee5d36762e171faad2724af93\/svn-buddy.phar",
+            "signature_download_url": "https:\/\/svn-buddy-updater.s3.amazonaws.com\/snapshots\/3f5646dc0967c2dee5d36762e171faad2724af93\/svn-buddy.phar.sig"
         }
     },
     "stable": {
