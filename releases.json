@@ -11,11 +11,6 @@
             "release_date": 1757506208,
             "phar_download_url": "https:\/\/svn-buddy-updater.s3.amazonaws.com\/snapshots\/5f573bbe6c311363f770441a8eab4d5a1eb1fef1\/svn-buddy.phar",
             "signature_download_url": "https:\/\/svn-buddy-updater.s3.amazonaws.com\/snapshots\/5f573bbe6c311363f770441a8eab4d5a1eb1fef1\/svn-buddy.phar.sig"
-        },
-        "snapshot:v0.8.0-9-g30ec906": {
-            "release_date": 1757063071,
-            "phar_download_url": "https:\/\/svn-buddy-updater.s3.amazonaws.com\/snapshots\/30ec906137cb2cea0b244e9fd6f8805f7081bdc3\/svn-buddy.phar",
-            "signature_download_url": "https:\/\/svn-buddy-updater.s3.amazonaws.com\/snapshots\/30ec906137cb2cea0b244e9fd6f8805f7081bdc3\/svn-buddy.phar.sig"
         }
     },
     "stable": {
